@@ -10,7 +10,6 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
 import javafx.geometry.*;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextInputDialog;
@@ -18,7 +17,7 @@ import javafx.scene.control.TextInputDialog;
 public class Main extends Application 
 {
 	private int numOfRooms;
-	private TenantManager tenantManager = new TenantManager();
+	private TenantManager tenantManager;
 	
 	private Label title = new Label("University Housing");
 	
@@ -34,7 +33,7 @@ public class Main extends Application
 	private TextArea textArea1 = new TextArea();
 	
 	private Label roomLb2 = new Label("Room");
-	private Label monthLb = new Label("Month");
+	private Label monthLb = new Label("Month(1-12)");
 	private Label amountLb = new Label("Amount");
 	private TextField roomField2 = new TextField();
 	private TextField monthField = new TextField();
@@ -49,7 +48,7 @@ public class Main extends Application
 	public void start(Stage stage) 
 	{	
 		numOfRooms = getNumOfRooms();
-		
+		tenantManager = new TenantManager(numOfRooms);
 		HBox titleBox = new HBox(title);
 		titleBox.setAlignment(Pos.CENTER);
 		
@@ -61,7 +60,7 @@ public class Main extends Application
 		HBox hBox2 = new HBox(10);
 		addTenantButton.setOnAction(e -> addHandler());
 		displayTenantsButton.setOnAction(e -> displayHandler());
-		removeTenantButton.setOnAction(e -> removeHandler(roomField1.getText()));
+		removeTenantButton.setOnAction(e -> removeHandler());
 		hBox2.getChildren().addAll(addTenantButton, displayTenantsButton,
 				removeTenantButton);
 		hBox2.setAlignment(Pos.CENTER);
@@ -72,6 +71,8 @@ public class Main extends Application
 		hBox3.setAlignment(Pos.CENTER);
 		
 		HBox hBox4 = new HBox(10);
+		makeButton.setOnAction(e -> makePaymentHandler());
+		listButton.setOnAction(e -> listPaymentsHandler());
 		hBox4.getChildren().addAll(makeButton, listButton);
 		hBox4.setAlignment(Pos.CENTER);
 		
@@ -99,18 +100,19 @@ public class Main extends Application
 		dialog.setHeaderText("How many rooms?");
 		dialog.setTitle("Room Information Request");
 		String response = dialog.showAndWait().get();
-		if(tryParse(response) == null) 
+		boolean inputValid = false;
+		while(!inputValid)
 		{
-			dialog.setHeaderText("The number  of rooms must be a positive integer.");
-			response = dialog.showAndWait().get();
+			if(tryParse(response) == null || Integer.parseInt(response) < 0)
+			{
+				dialog.setHeaderText("The number  of rooms must be a positive integer.");
+				response = dialog.showAndWait().get();
+			}
+			else
+				inputValid = true;
 		}
-		int num = Integer.parseInt(response);
-		if(num < 1)
-		{
-			dialog.setHeaderText("The number  of rooms must be a positive integer.");
-			response = dialog.showAndWait().get();			
-		}
-		return num;
+		return Integer.parseInt(response);
+		
 	}
 	private void addHandler() 
 	{
@@ -123,46 +125,98 @@ public class Main extends Application
 			textArea1.setText("Please direct tenant to Guiness Book of World Records.");
 		else if(tryParse(rm) == null) 
 			textArea1.setText("Room must be an integer.");
-		else if(Integer.parseInt(rm) < 1 )// || Integer.parseInt(rm) > numOfRms)
-			textArea1.setText("Please enter a positive number that is less than "); //+ numOfRms);
-		else if(tenantManager.CheckIfRmIsOccupied(Integer.parseInt(rm)))
+		else if(Integer.parseInt(rm) < 1 || Integer.parseInt(rm) > numOfRooms)
+			textArea1.setText("Room must be a positive number that is less than " + (numOfRooms + 1));
+		else if(tenantManager.getTenants()[Integer.parseInt(rm) - 1].getName() != "Empty")
 				textArea1.setText("Room " + rm + " is occupied.");
 		else 
 		{
-			tenantManager.AddTenant(new Tenant(Integer.parseInt(rm), name));
+			tenantManager.setTenant(Integer.parseInt(rm), new Tenant(name));
 			roomField1.setText("");
 			nameField.setText("");
 		}
 	}
 	private void displayHandler() 
 	{
-		if(tenantManager.tenants.length == 0)
+		if(tenantManager.getRoomsOccupied() == 0)
 			textArea1.setText("All rooms are empty.");
 		else
-			textArea1.setText(tenantManager.DisplayTenants());
+			textArea1.setText(tenantManager.displayTenants());
 	}
-	private void removeHandler(String rmEntered) 
+	private void removeHandler() 
 	{
-		if(rmEntered.length() == 0)
+		String rm = roomField1.getText();
+		if(rm.length() == 0)
 			textArea1.setText("Please enter a room number.");
-		else if(tryParse(rmEntered) == null)// || Integer.parseInt(rm) > numOfRms)
-			textArea1.setText("Room must be an integer."); //+ numOfRms);
+		else if(tryParse(rm) == null || Integer.parseInt(rm) < 1 || Integer.parseInt(rm) > numOfRooms)
+			textArea1.setText("Room must be a positive number that is less than " + (numOfRooms + 1));
+		else if (tenantManager.getTenants()[Integer.parseInt(rm) - 1].getName() == "Empty")
+			textArea1.setText(Integer.parseInt(rm) + " is already empty.");
 		else 
 		{
-			int rm = Integer.parseInt(rmEntered);
-			String result = tenantManager.RemoveTenant(rm);
-			if(result == null)
-				textArea1.setText(rmEntered + " is not occupied.");
-			else if(rm < 1 )// || Integer.parseInt(rm) > numOfRms)
-				textArea1.setText("Please enter a positive integer that is less than "); //+ numOfRms);
-			else 
-				textArea1.setText(result);
+			textArea1.setText(tenantManager.removeTenant(Integer.parseInt(rm)));
+			roomField1.setText("");
+		}
+	}
+	private void makePaymentHandler() 
+	{
+		String rm = roomField2.getText();
+		String month = monthField.getText();
+		String amount = amountField.getText();
+		if(rm.length() == 0 || amount.length() == 0 || month.length() == 0)
+			textArea2.setText("Room number, payment amount, and the month must be entered. Month must be in number format.");
+		else if(tryParse(rm) == null || tryParse(month) == null || doubleTryParse(amount) == null) 
+		{
+			textArea2.setText("Room number and month must be integers. "
+					+ "Payment amount must be a number with no more than two decimal places.");
+		}
+		else if(Integer.parseInt(rm) < 1 || Integer.parseInt(rm) > numOfRooms)
+			textArea2.setText("Room must be a positive number that is less than " + (numOfRooms + 1));
+		else if(tenantManager.getTenants()[Integer.parseInt(rm) - 1].getName() == "Empty")
+			textArea2.setText("Room " + rm + " is not occupied.");
+		else if(Integer.parseInt(month) < 0 || Integer.parseInt(month) > 12)
+			textArea2.setText("Please enter the number value of the month. eg. January = 1.");
+		else if(amount.indexOf(".") != -1 && amount.substring(amount.indexOf(".") + 1).length() > 2)
+			textArea2.setText("Payment amount must be a number with no more than two decimal places.");
+		else
+		{
+			tenantManager.getTenants()[Integer.parseInt(rm) - 1].recordPayment(Integer.parseInt(month), 
+					Double.parseDouble(amount));
+			roomField2.setText("");
+			monthField.setText("");
+			amountField.setText("");
+			textArea2.setText("Payment recorded.");
+		}
+	}
+	private void listPaymentsHandler() 
+	{
+		String rm = roomField2.getText();
+		if(rm.length() == 0)
+			textArea2.setText("Please enter room numner.");
+		else if(tryParse(rm) == null)
+			textArea2.setText("Room number must be a positive integer that is less than " + (numOfRooms + 1));
+		else if(Integer.parseInt(rm) < 1 || Integer.parseInt(rm) > numOfRooms)
+			textArea2.setText("Room must be a positive number that is less than " + (numOfRooms + 1));
+		else if(tenantManager.getTenants()[Integer.parseInt(rm) - 1].getName() == "Empty")
+			textArea2.setText("Room " + rm + " is not occupied.");
+		else
+		{
+			textArea2.setText(tenantManager.getTenants()[Integer.parseInt(rm) - 1].listPayments());
+			roomField2.setText("");
 		}
 	}
 	private static Integer tryParse(String text) 
 	{
 		  try {
 		    return Integer.parseInt(text);
+		  } catch (NumberFormatException e) {
+		    return null;
+		  }
+	}
+	private static Double doubleTryParse(String text) 
+	{
+		  try {
+		    return Double.parseDouble(text);
 		  } catch (NumberFormatException e) {
 		    return null;
 		  }

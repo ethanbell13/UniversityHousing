@@ -1,35 +1,33 @@
 package application;
 
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Set;
-
-
-	public class Tenant
+public class Tenant
 {
-		protected Map<String, Double> payHis = new HashMap<>();
-		protected String name;
-		protected int rm;
-		
-		protected Tenant(int roomIn, String nameIn)
+	private String name;
+	//Vaue of -1 signifies no payment entered.
+	private double[] payHis = new double[] {-1, -1, -1, -1, -1, -1,-1, -1, -1, -1, -1, -1};
+	public Tenant() {name = "Empty";}										
+	public Tenant(String nameIn)
+	{
+		name = nameIn;
+	}
+	public double[] getPayHis() {return payHis;}
+	public String getName() {return name;}
+	public void recordPayment(int month, Double amount) {payHis[month -1] = amount;}
+	public String listPayments() 
+	{
+		String[] month = new String[]
+				 {"January", "February", "March", "April", "May", "June", 
+				  "July", "August", "September", "October", "November", "December"};
+		String payments = "Month and Year    Amount\n";
+		double total = 0;  
+		for(int i = 0; i < 12; i++) 
 		{
-			name = nameIn;
-			rm = roomIn;
-		}
-		protected void RecordPayment(String yearMonth, Double amt) 
-		{
-			payHis.put(yearMonth, amt);
-		}
-		protected String ListPayments() 
-		{
-			String payments = "Month and Year    Amount\n";
-			Set<String> keys = payHis.keySet();
-			int total = 0;  
-			for(String key: keys) 
+			if(payHis[i] != -1) 
 			{
-				total += payHis.get(key);
-				payments += key + "            " + payHis.get(key) + "\n";
+				total += payHis[i];
+				payments += month[i] + "             $" + payHis[i] + "\n";
 			}
-			return payments + "Total Paid So Far: $" + total;
 		}
+		return payments + "Total Paid So Far: $" + total;
+	}
 }

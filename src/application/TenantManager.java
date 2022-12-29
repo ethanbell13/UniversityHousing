@@ -1,17 +1,24 @@
 package application;
 
-public class TenantManager 
+import java.io.Serializable;
+
+public class TenantManager implements Serializable
 {
 	private Tenant[] tenants;
 	private int roomsOccupied = 0;
-	public Tenant[] getTenants() {return tenants;}
-	public int getRoomsOccupied() {return roomsOccupied;}
-	public TenantManager(int numOfRooms)
+	public int numOfRooms;
+	
+	public TenantManager(int numOfRoomsIn)
 	{
+		numOfRooms = numOfRoomsIn;
 		tenants = new Tenant[numOfRooms];
 		for(int i = 0; i < numOfRooms; i++)
 			tenants[i] = new Tenant();
 	}
+	public Tenant[] getTenants() {return tenants;}
+	public int getRoomsOccupied() {return roomsOccupied;}
+	public int getNumOfRooms() {return numOfRooms;}
+	public Tenant getTenant(int position) {return tenants[position];}
 	public void setTenant(int room, Tenant tenant) 
 	{
 		tenants[room - 1] = tenant;

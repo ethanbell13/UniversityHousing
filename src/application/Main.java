@@ -1,18 +1,22 @@
 package application;
 	
+import java.io.File;
+
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.stage.Stage;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.HBox;
-import javafx.scene.paint.Color;
 import javafx.geometry.*;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextInputDialog;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 
 public class Main extends Application 
 {
@@ -33,10 +37,12 @@ public class Main extends Application
 	private TextArea textArea1 = new TextArea();
 	
 	private Label roomLb2 = new Label("Room");
-	private Label monthLb = new Label("Month(1-12)");
+	//private Label monthLb = new Label("Month(1-12)");
 	private Label amountLb = new Label("Amount");
 	private TextField roomField2 = new TextField();
-	private TextField monthField = new TextField();
+	private ComboBox<String> monthCombo = new ComboBox<>();
+	private String month;
+	//private TextField monthField = new TextField();
 	private TextField amountField = new TextField();
 	
 	private Button makeButton = new Button("Make Payment");
@@ -44,11 +50,13 @@ public class Main extends Application
 	
 	private TextArea textArea2 = new TextArea();
 	
+	private Button saveAndQuitButton = new Button("Save & Quit");
+	
 	@Override
 	public void start(Stage stage) 
 	{	
-		numOfRooms = getNumOfRooms();
-		tenantManager = new TenantManager(numOfRooms);
+		initiate();
+		numOfRooms = tenantManager.getNumOfRooms();
 		HBox titleBox = new HBox(title);
 		titleBox.setAlignment(Pos.CENTER);
 		
@@ -65,9 +73,11 @@ public class Main extends Application
 				removeTenantButton);
 		hBox2.setAlignment(Pos.CENTER);
 		
+		monthCombo.getItems().addAll("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec");
+		monthCombo.setValue("Month");
+		monthCombo.setOnAction(e -> month = monthCombo.getValue());
 		HBox hBox3 = new HBox(10);
-		hBox3.getChildren().addAll(roomLb2, roomField2, monthLb, 
-				monthField, amountLb, amountField);
+		hBox3.getChildren().addAll(roomLb2, roomField2, monthCombo, amountLb, amountField);
 		hBox3.setAlignment(Pos.CENTER);
 		
 		HBox hBox4 = new HBox(10);
@@ -76,9 +86,17 @@ public class Main extends Application
 		hBox4.getChildren().addAll(makeButton, listButton);
 		hBox4.setAlignment(Pos.CENTER);
 		
+		HBox hBox5 = new HBox(10);
+		saveAndQuitButton.setOnAction(e -> {
+			TenantFileHandler.saveRecords(tenantManager);
+			Platform.exit();
+											});
+		hBox5.getChildren().addAll(saveAndQuitButton);
+		hBox5.setAlignment(Pos.CENTER);
+		
 		VBox root = new VBox(10);
 		root.getChildren().addAll(titleBox, hBox1, hBox2, textArea1, hBox3,
-				hBox4, textArea2);
+				hBox4, textArea2, hBox5);
 		
 		// Check if monthAndYear key already exist and ask user if they wish
 		//to change the already existing key
@@ -94,41 +112,71 @@ public class Main extends Application
 	{
 		launch(args);
 	}
-	private int getNumOfRooms() 
+	private void initiate() 
 	{
-		TextInputDialog dialog = new TextInputDialog();
-		dialog.setHeaderText("How many rooms?");
-		dialog.setTitle("Room Information Request");
-		String response = dialog.showAndWait().get();
-		boolean inputValid = false;
-		while(!inputValid)
-		{
-			if(tryParse(response) == null || Integer.parseInt(response) < 0)
-			{
-				dialog.setHeaderText("The number  of rooms must be a positive integer.");
-				response = dialog.showAndWait().get();
-			}
-			else
-				inputValid = true;
-		}
-		return Integer.parseInt(response);
-		
+		String path = System.getProperty("user.home") + "\\UniversityHousing\\UniversityHousing.dat";
+    	if(!new File(path).exists())
+    	{
+    		TextInputDialog dialog = new TextInputDialog();
+    		dialog.setHeaderText("How many rooms?");
+    		dialog.setTitle("Room Information Request");
+    		String response = dialog.showAndWait().get();
+    		boolean inputValid = false;
+    		while(!inputValid)
+    		{
+    			if(tryParse(response) == null || Integer.parseInt(response) < 0)
+    			{
+    				Alert numOfRoomsAlert = new Alert(AlertType.INFORMATION);
+    				numOfRoomsAlert.setContentText("The number  of rooms must be a positive integer.");
+    				numOfRoomsAlert.setHeaderText("Invalid Input Alert");
+    				numOfRoomsAlert.showAndWait();
+    				response = dialog.showAndWait().get();
+    			}
+    			else
+    				inputValid = true;
+    		}
+    		tenantManager = new TenantManager(Integer.parseInt(response));
+    	}
+    	else
+    		tenantManager = TenantFileHandler.readRecords();
 	}
 	private void addHandler() 
 	{
+		Alert addAlert = new Alert(AlertType.INFORMATION);
+		addAlert.setHeaderText("Invalid Input Alert");
 		textArea1.setText("");
 		String name = nameField.getText();
 		String rm = roomField1.getText();
-		if(rm.length() == 0 || name.length() == 0)
-			textArea1.setText("Room number and name must be entered.");
+		if(rm.length() == 0 || name.length() == 0) 
+		{
+			addAlert.setContentText("Room number and name must be entered.");
+			addAlert.showAndWait();
+			//textArea1.setText("Room number and name must be entered.");
+		}	
 		else if(name.length() > 747) 
-			textArea1.setText("Please direct tenant to Guiness Book of World Records.");
+		{
+			addAlert.setContentText("Please direct tenant to Guiness Book of World Records.");
+			addAlert.showAndWait();
+			//textArea1.setText("Please direct tenant to Guiness Book of World Records.");
+		}
 		else if(tryParse(rm) == null) 
-			textArea1.setText("Room must be an integer.");
+		{
+			addAlert.setContentText("Room must be an integer.");
+			addAlert.showAndWait();
+			//textArea1.setText("Room must be an integer.");
+		}
 		else if(Integer.parseInt(rm) < 1 || Integer.parseInt(rm) > numOfRooms)
-			textArea1.setText("Room must be a positive number that is less than " + (numOfRooms + 1));
+		{
+			addAlert.setContentText("Room must be a positive number that is less than " + (numOfRooms + 1));
+			addAlert.showAndWait();
+			//textArea1.setText("Room must be a positive number that is less than " + (numOfRooms + 1));
+		}
 		else if(tenantManager.getTenants()[Integer.parseInt(rm) - 1].getName() != "Empty")
-				textArea1.setText("Room " + rm + " is occupied.");
+		{
+			addAlert.setContentText("Room " + rm + " is occupied.");
+			addAlert.showAndWait();
+			//textArea1.setText("Room " + rm + " is occupied.");
+		}
 		else 
 		{
 			tenantManager.setTenant(Integer.parseInt(rm), new Tenant(name));
@@ -138,20 +186,41 @@ public class Main extends Application
 	}
 	private void displayHandler() 
 	{
-		if(tenantManager.getRoomsOccupied() == 0)
-			textArea1.setText("All rooms are empty.");
+		Alert displayAlert = new Alert(AlertType.INFORMATION);
+		displayAlert.setHeaderText("Invalid Input Alert");
+		displayAlert.setContentText("All rooms are empty");
+		if(tenantManager.getRoomsOccupied() == 0) 
+		{
+			displayAlert.showAndWait();
+			//textArea1.setText("All rooms are empty.");
+		}
 		else
 			textArea1.setText(tenantManager.displayTenants());
 	}
 	private void removeHandler() 
 	{
+		Alert removeAlert = new Alert(AlertType.INFORMATION);
+		removeAlert.setHeaderText("Invalid Input Alert");
 		String rm = roomField1.getText();
-		if(rm.length() == 0)
-			textArea1.setText("Please enter a room number.");
+		if(rm.length() == 0) 
+		{
+			removeAlert.setContentText("Please enter a room number.");
+			removeAlert.showAndWait();
+			//textArea1.setText("Please enter a room number.");
+		}
 		else if(tryParse(rm) == null || Integer.parseInt(rm) < 1 || Integer.parseInt(rm) > numOfRooms)
-			textArea1.setText("Room must be a positive number that is less than " + (numOfRooms + 1));
+		{
+			removeAlert.setContentText("Room must be a positive number that is less than " + (numOfRooms + 1));
+			removeAlert.showAndWait();
+			//textArea1.setText("Room must be a positive number that is less than " + (numOfRooms + 1));
+		}
 		else if (tenantManager.getTenants()[Integer.parseInt(rm) - 1].getName() == "Empty")
-			textArea1.setText(Integer.parseInt(rm) + " is already empty.");
+		{
+			removeAlert.setContentText(Integer.parseInt(rm) + " is already empty.");
+			removeAlert.showAndWait();
+			//textArea1.setText(Integer.parseInt(rm) + " is already empty.");
+		}
+			
 		else 
 		{
 			textArea1.setText(tenantManager.removeTenant(Integer.parseInt(rm)));
@@ -160,45 +229,85 @@ public class Main extends Application
 	}
 	private void makePaymentHandler() 
 	{
-		String rm = roomField2.getText();
-		String month = monthField.getText();
+		Alert makePaymentAlert = new Alert(AlertType.INFORMATION);
+		makePaymentAlert.setHeaderText("Invalid Input Alert");
 		String amount = amountField.getText();
-		if(rm.length() == 0 || amount.length() == 0 || month.length() == 0)
-			textArea2.setText("Room number, payment amount, and the month must be entered. Month must be in number format.");
-		else if(tryParse(rm) == null || tryParse(month) == null || doubleTryParse(amount) == null) 
+		String rm = roomField2.getText();
+		if(rm.length() == 0 || amount.length() == 0 || month == null) 
 		{
-			textArea2.setText("Room number and month must be integers. "
+			makePaymentAlert.setContentText("Room number, payment amount, and the month must be entered.");
+			makePaymentAlert.showAndWait();
+			//textArea2.setText("Room number, payment amount, and the month must be entered. Month must be in number format.");
+		}
+		else if(tryParse(rm) == null || doubleTryParse(amount) == null) 
+		{
+			makePaymentAlert.setContentText("Room number must be an integer. "
 					+ "Payment amount must be a number with no more than two decimal places.");
+			makePaymentAlert.showAndWait();
+			//textArea2.setText("Room number must be an integer. "
+			//		+ "Payment amount must be a number with no more than two decimal places.");
 		}
 		else if(Integer.parseInt(rm) < 1 || Integer.parseInt(rm) > numOfRooms)
-			textArea2.setText("Room must be a positive number that is less than " + (numOfRooms + 1));
+		{
+			makePaymentAlert.setContentText("Room must be a positive number that is less than " + (numOfRooms + 1));
+			makePaymentAlert.showAndWait();
+			//textArea2.setText("Room must be a positive number that is less than " + (numOfRooms + 1));
+		}
 		else if(tenantManager.getTenants()[Integer.parseInt(rm) - 1].getName() == "Empty")
-			textArea2.setText("Room " + rm + " is not occupied.");
-		else if(Integer.parseInt(month) < 0 || Integer.parseInt(month) > 12)
-			textArea2.setText("Please enter the number value of the month. eg. January = 1.");
-		else if(amount.indexOf(".") != -1 && amount.substring(amount.indexOf(".") + 1).length() > 2)
-			textArea2.setText("Payment amount must be a number with no more than two decimal places.");
+		{
+			makePaymentAlert.setContentText("Room " + rm + " is not occupied.");
+			makePaymentAlert.showAndWait();
+			//textArea2.setText("Room " + rm + " is not occupied.");
+		}
+		else if(month.length() != 3)
+		{
+			makePaymentAlert.setContentText("Please select a month.");
+			makePaymentAlert.showAndWait();
+			//textArea2.setText("Please select a month.");
+		}
+		else if(amount.indexOf(".") != -2 && amount.substring(amount.indexOf(".") + 1).length() > 2)
+		{
+			makePaymentAlert.setContentText("Payment amount must be a number with no more than two decimal places.");
+			makePaymentAlert.showAndWait();
+			//textArea2.setText("Payment amount must be a number with no more than two decimal places.");
+		}
 		else
 		{
-			tenantManager.getTenants()[Integer.parseInt(rm) - 1].recordPayment(Integer.parseInt(month), 
+			tenantManager.getTenants()[Integer.parseInt(rm) - 1].recordPayment(monthToInt(month), 
 					Double.parseDouble(amount));
 			roomField2.setText("");
-			monthField.setText("");
 			amountField.setText("");
 			textArea2.setText("Payment recorded.");
 		}
 	}
 	private void listPaymentsHandler() 
 	{
+		Alert listPaymentAlert = new Alert(AlertType.INFORMATION);
 		String rm = roomField2.getText();
 		if(rm.length() == 0)
-			textArea2.setText("Please enter room numner.");
+		{
+			listPaymentAlert.setContentText("Please enter room number.");
+			listPaymentAlert.showAndWait();
+			//textArea2.setText("Please enter room number.");
+		}
 		else if(tryParse(rm) == null)
-			textArea2.setText("Room number must be a positive integer that is less than " + (numOfRooms + 1));
+		{
+			listPaymentAlert.setContentText("Room number must be a positive integer that is less than " + (numOfRooms + 1));
+			listPaymentAlert.showAndWait();
+			//textArea2.setText("Room number must be a positive integer that is less than " + (numOfRooms + 1));
+		}
 		else if(Integer.parseInt(rm) < 1 || Integer.parseInt(rm) > numOfRooms)
-			textArea2.setText("Room must be a positive number that is less than " + (numOfRooms + 1));
+		{
+			listPaymentAlert.setContentText("Room must be a positive number that is less than " + (numOfRooms + 1));
+			listPaymentAlert.showAndWait();
+			//textArea2.setText("Room must be a positive number that is less than " + (numOfRooms + 1));
+		}
 		else if(tenantManager.getTenants()[Integer.parseInt(rm) - 1].getName() == "Empty")
-			textArea2.setText("Room " + rm + " is not occupied.");
+		{
+			listPaymentAlert.setContentText("Room " + rm + " is not occupied.");
+			listPaymentAlert.showAndWait();
+			//textArea2.setText("Room " + rm + " is not occupied.");
+		}
 		else
 		{
 			textArea2.setText(tenantManager.getTenants()[Integer.parseInt(rm) - 1].listPayments());
@@ -207,19 +316,24 @@ public class Main extends Application
 	}
 	private static Integer tryParse(String text) 
 	{
-		  try {
-		    return Integer.parseInt(text);
-		  } catch (NumberFormatException e) {
-		    return null;
-		  }
+		  try {return Integer.parseInt(text);} 
+		  catch (NumberFormatException e) {return null;}
 	}
 	private static Double doubleTryParse(String text) 
 	{
-		  try {
-		    return Double.parseDouble(text);
-		  } catch (NumberFormatException e) {
-		    return null;
-		  }
+		  try {return Double.parseDouble(text);} 
+		  catch (NumberFormatException e) {return null;}
+	}
+	private int monthToInt(String month) 
+	{
+		String[] months = new String[] 
+				{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+		for(int i = 0; i < 12; i++) 
+		{
+			if(months[i] == month)
+				return i + 1;
+		}
+		return -999;
 	}
 }
 /*

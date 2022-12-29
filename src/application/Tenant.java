@@ -1,6 +1,8 @@
 package application;
 
-public class Tenant
+import java.io.Serializable;
+
+public class Tenant implements Serializable
 {
 	private String name;
 	//Vaue of -1 signifies no payment entered.
@@ -12,7 +14,10 @@ public class Tenant
 	}
 	public double[] getPayHis() {return payHis;}
 	public String getName() {return name;}
-	public void recordPayment(int month, Double amount) {payHis[month -1] = amount;}
+	public void recordPayment(int month, Double amount) 
+	{
+		payHis[month -1] = amount;
+	}
 	public String listPayments() 
 	{
 		String[] month = new String[]

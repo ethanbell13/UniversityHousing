@@ -1,5 +1,7 @@
 module UniversityHousing {
+	exports application;
+
+	requires javafx.base;
 	requires javafx.controls;
-	
-	opens application to javafx.graphics, javafx.fxml;
+	requires javafx.graphics;
 }
